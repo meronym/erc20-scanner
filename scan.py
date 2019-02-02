@@ -22,7 +22,7 @@ def scan_tx(tx, nonce):
     token_diffs = result['stateDiff'][token_contract]['storage']
     sloc_changed = set(token_diffs.keys())
 
-    # collect all the address-like values that got pushed on the stack
+    # collect all 'address-like' values that got pushed on the stack
     holder_candidates = {
         val for val in dump_stack(result['vmTrace']['ops'])
         if int(val, 16) & ADDRESS_MASK == 0

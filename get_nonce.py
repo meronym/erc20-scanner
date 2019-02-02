@@ -22,9 +22,9 @@ def get_nonce(sample_tx):
 
     # get the token contract address
     token_contract = transfer['address']
+    print('Token contract:', token_contract)
     sender_address = transfer['topics'][1]
     assert sender_address.startswith('0x') and len(sender_address) == 2 + 64
-    print('Token contract:', token_contract)
 
     # create a set of storage locations that got changed in the token contract by this transaction
     result = node.call('trace_replayTransaction', sample_tx, ['stateDiff'])
@@ -51,7 +51,7 @@ def get_nonce(sample_tx):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Scan an sample ERC20 transfer tx to determine the contract's internal balance map nonce")
+        description="Scan a sample ERC20 transfer tx to determine the contract's internal balance map nonce")
     parser.add_argument('--sample', help='hash of the sample transfer tx')
     
     args = parser.parse_args()
