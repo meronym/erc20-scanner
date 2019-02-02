@@ -48,8 +48,11 @@ def scan_tx(tx, nonce):
         elif '+' in token_diffs[sloc]:
             old_value = None
             new_value = int(token_diffs[sloc]['+'], 16)
-        # TODO: account for the key being deleted from storage as well
-        print('Holder:{} {:+} Tx:{}'.format(holder, new_value - (old_value or 0), tx))
+        elif '-' in token_diffs[sloc]:
+            old_value = int(token_diffs[sloc]['-'], 16)
+            new_value = None
+        delta = (new_value or 0) - (old_value or 0)
+        print('Holder:{} {:+} Tx:{}'.format(holder, delta, tx))
 
 
 if __name__ == '__main__':
