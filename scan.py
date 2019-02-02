@@ -8,9 +8,9 @@ from lib.rpc import Parity
 from lib.utils import dump_stack, get_storage_location
 
 
-ADDRESS_MASK = int('0xffffffffffffffffffffffff0000000000000000000000000000000000000000', 16)
-
 node = Parity('http://localhost:8545')
+
+ADDRESS_MASK = int('0xffffffffffffffffffffffff0000000000000000000000000000000000000000', 16)
 
 
 def scan_tx(tx, nonce):
@@ -48,6 +48,7 @@ def scan_tx(tx, nonce):
         elif '+' in token_diffs[sloc]:
             old_value = None
             new_value = int(token_diffs[sloc]['+'], 16)
+        # TODO: account for the key being deleted from storage as well
         print('Holder:{} {:+} Tx:{}'.format(holder, new_value - (old_value or 0), tx))
 
 

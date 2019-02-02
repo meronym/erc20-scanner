@@ -39,11 +39,21 @@ Receives a `nonce` and a `tx`. Analyzes the execution of `tx` and identifies the
 Both the time and memory complexity are linear in the number of values that get pushed in the VM stack when the tx gets executed, which in turn has an upper bound on the block gas limit. This makes retrieving the traces from Parity the main computational overhead. Other than that, the number of `sha3` computations is relatively small (<1000) for analyzing a transaction.
 
 ### Example
+- Scanning a contract deployment transaction outputs the tokens allocated in the constructor code.
 ```shell=
 $ python scan.py --nonce=5 0x436fc7d21ed4a0a634f41b50ccb42fca12be7322de5bf9a20c97bdccbb5b2a04
 
 Analyzing 39 candidates...
 Holder:0x00c5e04176d95a286fcce0e68c683ca0bfec8454 +200000000000000000000000000 Tx:0x436fc7d21ed4a0a634f41b50ccb42fca12be7322de5bf9a20c97bdccbb5b2a04
+```
+
+- Scanning a standard erc20 transfer transaction
+```shell=
+$ python scan.py --nonce=5 0x9934bb687357d81d8d92076ba63164cc3ee8f5d5c7a9ce2f0c64c27b707abca1
+
+Analyzing 56 candidates...
+Holder:0xab6e89eae31e9f8053a77f743a78e5e858595407 +13016785137944555173 Tx:0x9934bb687357d81d8d92076ba63164cc3ee8f5d5c7a9ce2f0c64c27b707abca1
+Holder:0x52fc65ef2937cc83c4f70685562283ab8f690e33 -13016785137944555173 Tx:0x9934bb687357d81d8d92076ba63164cc3ee8f5d5c7a9ce2f0c64c27b707abca1
 ```
 
 ### TODO
