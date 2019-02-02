@@ -15,7 +15,7 @@ Scans the bytecode of an ERC20 token contract to identify the internal nonce tha
 - The script replays the transaction (via a Parity `trace_replayTransaction` call) and monitors the state diffs to collect a set of storage location keys that got changed by the execution of the transaction. The potential balance values are a strict subset of this set of keys.
 - We ask Parity to simulate a `balanceOf(sender)` and compile a list of all values that circulated on the stack during this call.
 - We expect the only common element of the two sets created above is the storage location key of the balance for the token sender, which would need to have be accessed by both the routines. Let this be called `sender_sloc`.
-- Now we know that `sender_sloc = sha3(sender + nonce)` where `nonce` is a unique value allocated by the Solidity compiler to the mapping of balances. We assume all versions of Solidity use the same memory mapping strategy *needs to be validated*. This allows us to brute force the nonce in very few steps, as Solidity typically allocates the nonces in increasing order starting from zero, and there are not many data structures (hence nonces) defined in the typical token contracts.
+- Now we know that `sender_sloc = sha3(sender + nonce)` where `nonce` is a unique value allocated by the Solidity compiler to the mapping of balances. We assume all versions of Solidity use the same memory mapping strategy [*needs to be validated*]. This allows us to brute force the `nonce` in very few steps, as Solidity typically allocates the `nonce` values in increasing order starting from zero and there is an upper bound on how many data structures (hence nonces) will be defined in the typical token contracts.
 
 ### Example
 ```shell=
@@ -36,7 +36,7 @@ Receives a `nonce` and a `tx`. Analyzes the execution of `tx` and identifies the
 - This lets us export event each time a balance key is touched, on the form `BalanceChange(holder_address, old_value, new_value)`
 
 ### Analysis
-Both the time and memory complexity are linear in the number of values that get pushed in the VM stack when the tx gets executed, which in turn has an upper bound on the block gas limit. So the main computational overhead is linked to retrieving the traces from Parity. Other than that, there’s a relatively small (<1000) number of sha3 computations for each tx.
+Both the time and memory complexity are linear in the number of values that get pushed in the VM stack when the tx gets executed, which in turn has an upper bound on the block gas limit. This makes retrieving the traces from Parity the main computational overhead. Other than that, the number of `sha3` computations is relatively small (<1000) for analyzing a transaction.
 
 ### Example
 ```shell=
