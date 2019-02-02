@@ -59,6 +59,3 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     scan_tx(args.tx, args.nonce)
-
-    # '0xd9c9e291a3f8bf892b96c37266dbe5b1acefec23ab5f513fd3edbb4a7f12fea1',
-    # '0x99aca286a38ec8382bcadb13a176d9f2b20fd2ddb8670939e0b6324266744d63',

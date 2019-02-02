@@ -47,7 +47,7 @@ Analyzing 39 candidates...
 Holder:0x00c5e04176d95a286fcce0e68c683ca0bfec8454 +200000000000000000000000000 Tx:0x436fc7d21ed4a0a634f41b50ccb42fca12be7322de5bf9a20c97bdccbb5b2a04
 ```
 
-- Scanning a standard erc20 transfer transaction
+- Scanning a standard ERC20 transfer transaction
 ```shell=
 $ python scan.py --nonce=5 0x9934bb687357d81d8d92076ba63164cc3ee8f5d5c7a9ce2f0c64c27b707abca1
 
