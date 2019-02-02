@@ -1,4 +1,4 @@
-# token-monitor
+# ERC20 Scanner
 Monitors the balance changes of an ERC20 token contract
 
 This is bytecode analyzer that scans through the traces of a given transaction and figures out which token holder addresses had their corresponding balances changed as a result of the tx execution.
@@ -49,3 +49,78 @@ Both the time and memory complexity are linear in the number of values that get 
 - Make sure you're running Python 3 (no external code dependencies, so no need for using Pip or the like)
 - Tunnel your `localhost:8545` to a `json-rpc` instance of Parity with `--tracing` support enabled
 - Run `python get_nonce.py` or `python scan.py` as described above. Or use `--help` to get minimal rescue
+
+## Showcase
+### Binance Token (BNB)
+https://etherscan.io/address/0xB8c77482e45F1F44dE1745F52C74426C631bDD52#code
+Market cap: $842M
+
+```shell=
+$ ./get_nonce.py --sample=0x7cd824bc5c11a16dc52f738fef5c6e3aca923af7a7cd9ecc136547c9606eac13
+
+Token contract: 0xb8c77482e45f1f44de1745f52c74426c631bdd52
+Balance map nonce: 5
+```
+
+- Opaque initial allocation in the contract constructor - doesn't emit `Transfer()`.
+
+```shell=
+$ ./scan.py --nonce=5 --tx=0x436fc7d21ed4a0a634f41b50ccb42fca12be7322de5bf9a20c97bdccbb5b2a04
+
+Holder:0x00c5e04176d95a286fcce0e68c683ca0bfec8454 +200000000000000000000000000 Tx:0x436fc7d21ed4a0a634f41b50ccb42fca12be7322de5bf9a20c97bdccbb5b2a04
+```
+
+- Available balances can change via non-standard `freeze()` and `unfreeze()`
+```shell=
+$ ./scan.py --nonce=5 --tx=0x72af0f55b97b033af3b6e6162463681730c6429d0bc9c6c6ae9ad595aa2fbc57
+
+Holder:0x00c5e04176d95a286fcce0e68c683ca0bfec8454 -64000000000000000000000000 Tx:0x72af0f55b97b033af3b6e6162463681730c6429d0bc9c6c6ae9ad595aa2fbc57
+```
+
+- Emits `Burn()` instead of `Transfer(_, 0x0)`
+```shell=
+$ ./scan.py --nonce=5 --tx=0xbc4290d9bd404f03575db80446bd82954698c3fe99729d1eb098a765bb0e479b
+
+Holder:0x24b29cc8a5570bf728bd56679e1089d6c27891bb -10 Tx:0xbc4290d9bd404f03575db80446bd82954698c3fe99729d1eb098a765bb0e479b
+```
+
+### Maker (MKR)
+https://etherscan.io/address/0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2#code
+
+Market cap: $276M
+- Emits `Mint()` and `Burn()` instead of `Transfer(_, _)`
+
+
+### Holo (HOT)
+https://etherscan.io/address/0x6c6ee5e31d828de241282b9606c8e98ea48526e2#code
+
+Market cap: 166M
+- Emits a `Mint()` event instead of `Transfer(0x0, _)`
+- Non-standard `Burn()` event, doesn't log the holder address
+
+### 0X (ZRX)
+https://etherscan.io/address/0xe41d2489571d322189246dafa5ebde1f4699f498#code
+
+Market cap: $146M
+- Doesn't log initial token allocation in constructor
+
+### BasicAttentionToken (BAT)
+https://etherscan.io/address/0x0d8775f648430679a709e98d2b0cb6250d2887ef#code
+
+Market cap: $140M
+- Creates token supply with dedicated ICO functions, logs it with a custom `CreateBAT()` event
+- Participants can ask refunds during the ICO, these are logged with a custom `LogRefund()` event
+
+
+### ChainLink Token (LINK)
+https://etherscan.io/address/0x514910771af9ca656af840dff83e8264ecf986ca#code
+
+Market cap: $140M
+- Doesn't log initial token allocation in constructor
+
+
+### FirstBlood Token (ST)
+https://etherscan.io/address/0xaf30d2a7e90d7dc361c8c4585e9bb7d2f6f15bc7#code
+
+Market cap: $2M
+- Initial allocations from `allocateBountyAndEcosystemTokens()` are not logged.
