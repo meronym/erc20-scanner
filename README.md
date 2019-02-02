@@ -64,7 +64,7 @@ Holder:0x52fc65ef2937cc83c4f70685562283ab8f690e33 -13016785137944555173 Tx:0x993
 
 ## Setup
 - Clone the repository
-- Make sure you're running Python 3 (no external code dependencies, so no need for using Pip or the like)
+- Make sure you're running **Python 3** (no external code dependencies, so no need for using Pip or the like)
 - Tunnel your `localhost:8545` to a `json-rpc` instance of Parity with `--tracing` support enabled
 - Run `python get_nonce.py` or `python scan.py` as described above. Or use `--help` to get minimal rescue
 
