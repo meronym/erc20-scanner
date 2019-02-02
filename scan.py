@@ -2,6 +2,7 @@
 # coding: utf8
 
 import argparse
+import sys
 
 from lib.rpc import Parity
 from lib.utils import dump_stack, get_storage_location
@@ -14,9 +15,8 @@ node = Parity('http://localhost:8545')
 
 def scan_tx(tx, nonce):
     # get the token contract address
-    # result = node.call('eth_getTransactionReceipt', tx)
-    # token_contract = result['to'] or result['contractAddress']
-    token_contract = '0xaf30d2a7e90d7dc361c8c4585e9bb7d2f6f15bc7'
+    result = node.call('eth_getTransactionReceipt', tx)
+    token_contract = result['to'] or result['contractAddress']
 
     # retrieve the state diffs on the token contract induced by tx
     result = node.call('trace_replayTransaction', tx, ['stateDiff', 'vmTrace'])
@@ -28,7 +28,7 @@ def scan_tx(tx, nonce):
         val for val in dump_stack(result['vmTrace'])
         if int(val, 16) & ADDRESS_MASK == 0
     }
-    print('Analyzing {} candidates...'.format(len(holder_candidates)))
+    print('\nAnalyzing {} candidates...'.format(len(holder_candidates)), file=sys.stderr)
 
     # compute the minified rainbow table
     rainbow_table = {
