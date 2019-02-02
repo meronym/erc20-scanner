@@ -1,7 +1,7 @@
 # ERC20 Scanner
-Monitors the balance changes of an ERC20 token contract
+*Monitors the balance changes of an ERC20 token contract.*
 
-This is bytecode analyzer that scans through the traces of a given transaction and figures out which token holder addresses had their corresponding balances changed as a result of the tx execution.
+This is a bytecode analyzer that scans through the traces of a given transaction and figures out which token holder addresses had their corresponding balances changed as a result of the tx execution.
 
 This approach should work for any Solidity-based ERC20 contract, no ABI or source code needed. It also detects changes that happen at the time of contract creation (“pre-mines”) and hard-coded balances. Since it doesn’t rely on logs, it should catch minting/burning and other custom balance shifts as well, regardless of the emitted `Transfer()` events.
 
