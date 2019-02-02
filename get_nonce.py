@@ -10,13 +10,13 @@ from lib.utils import dump_stack, get_storage_location
 ERC20_TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
 ERC20_BALANCE_SELECTOR = '0x70a08231'
 
-node = Parity('http://localhost:8545')    
+node = Parity('http://localhost:8545')
 
 
 def get_nonce(sample_tx):
     # get the transaction receipt
     result = node.call('eth_getTransactionReceipt', sample_tx)
-    
+
     # find the first ERC20 Transfer() log
     transfer = [log for log in result['logs'] if log['topics'][0] == ERC20_TRANSFER_TOPIC][0]
 
@@ -33,7 +33,7 @@ def get_nonce(sample_tx):
     # monitor the stack on a balanceOf(sender_address) call
     data = ERC20_BALANCE_SELECTOR + sender_address[2:]
     result = node.call('trace_call', {'data': data, 'to': token_contract}, ['vmTrace'], 'latest')
-    stack_values = dump_stack(result['vmTrace']['ops'])
+    stack_values = dump_stack(result['vmTrace'])
 
     # the storage location of the sender_address balance should be present in both sets
     common_values = stack_values & sloc_changed
@@ -52,7 +52,7 @@ def get_nonce(sample_tx):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Scan a sample ERC20 transfer tx to determine the contract's internal balance map nonce")
-    parser.add_argument('--sample', help='hash of the sample transfer tx')
-    
+    parser.add_argument('sample', help='hash of the sample transfer tx')
+
     args = parser.parse_args()
     get_nonce(args.sample)

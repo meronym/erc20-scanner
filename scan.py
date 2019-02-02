@@ -9,13 +9,14 @@ from lib.utils import dump_stack, get_storage_location
 
 ADDRESS_MASK = int('0xffffffffffffffffffffffff0000000000000000000000000000000000000000', 16)
 
-node = Parity('http://localhost:8545')    
+node = Parity('http://localhost:8545')
 
 
 def scan_tx(tx, nonce):
     # get the token contract address
-    result = node.call('eth_getTransactionReceipt', tx)
-    token_contract = result['to'] or result['contractAddress']
+    # result = node.call('eth_getTransactionReceipt', tx)
+    # token_contract = result['to'] or result['contractAddress']
+    token_contract = '0xaf30d2a7e90d7dc361c8c4585e9bb7d2f6f15bc7'
 
     # retrieve the state diffs on the token contract induced by tx
     result = node.call('trace_replayTransaction', tx, ['stateDiff', 'vmTrace'])
@@ -24,9 +25,10 @@ def scan_tx(tx, nonce):
 
     # collect all 'address-like' values that got pushed on the stack
     holder_candidates = {
-        val for val in dump_stack(result['vmTrace']['ops'])
+        val for val in dump_stack(result['vmTrace'])
         if int(val, 16) & ADDRESS_MASK == 0
     }
+    print('Analyzing {} candidates...'.format(len(holder_candidates)))
 
     # compute the minified rainbow table
     rainbow_table = {
@@ -51,9 +53,9 @@ def scan_tx(tx, nonce):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Scan an ERC20 contract for balance changes')
+    parser.add_argument('tx', help='hash of the target tx')
     parser.add_argument('--nonce', type=int)
-    parser.add_argument('--tx', help='hash of the target tx')
-    
+
     args = parser.parse_args()
     scan_tx(args.tx, args.nonce)
 
