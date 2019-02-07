@@ -23,6 +23,9 @@ def get_nonce(sample_tx):
     # get the token contract address
     token_contract = transfer['address']
     print('Token contract:', token_contract)
+
+    # `sender_address` will be the 20 byte address, zerop-added to 32 bytes
+    # e.g. "0x000000000000000000000000a0576b6092d5840b4d4fa7a015ce7942e727a84d"
     sender_address = transfer['topics'][1]
     assert sender_address.startswith('0x') and len(sender_address) == 2 + 64
 

@@ -30,9 +30,9 @@ Receives a `nonce` and a `tx`. Analyzes the execution of `tx` and identifies the
 
 ### Current method
 - Gather the set of storage location keys that were changed in the contract as a result of executing `tx`
-- Gather all 'address-like' values that got pushed on the stack while executing `tx`. We assume these to be the only possible address values whose balance could change as a result of `tx`.
-- We compute a rainbow table that maps each `sha3(candidate + nonce)` back to `candidate`. We expect to process a max. of 1000 candidates for an average token transfer transaction.
-- We scan through the storage location keys that got touched during the execution and for each key we make a lookup in the rainbow table. If it's there, that means the key is related to the balance mapping of the rainbow table value.
+- Gather all 'address-like' values that got pushed on the stack while executing `tx`. We assume these to be the only possible address values whose balance could have changed as a result of `tx`.
+- We compute a rainbow table that maps each `sha3(candidate + nonce)` back to `candidate`. We expect to process a max. of ~1000 candidates for an average token transfer transaction.
+- We scan through the storage location keys that got touched during the execution and for each key we make a lookup in the rainbow table. If the preimage of the hash is there, we know this key is related to the balance mapping of the rainbow table value.
 - This lets us export event each time a balance key is touched, on the form `BalanceChange(holder_address, old_value, new_value)`
 
 ### Analysis
@@ -69,6 +69,8 @@ Holder:0x52fc65ef2937cc83c4f70685562283ab8f690e33 -13016785137944555173 Tx:0x993
 - Run `python get_nonce.py` or `python scan.py` as described above. Or use `--help` to get minimal rescue
 
 ## Showcase
+Everything below relates to mainnet data and pricing information as of February 2019.
+
 ### Binance Token (BNB)
 https://etherscan.io/address/0xB8c77482e45F1F44dE1745F52C74426C631bDD52#code
 Market cap: $842M
@@ -165,10 +167,21 @@ Market cap: 166M
 
 ### 0X (ZRX)
 https://etherscan.io/address/0xe41d2489571d322189246dafa5ebde1f4699f498#code
-
 Market cap: $146M
-- Doesn't log initial token allocation in constructor
 
+```shell=
+$ python get_nonce.py 0xeea79c5e417ffb23d15c44d6ac4e49279c43a310faa8e6de6695ece117f8097e
+
+Token contract: 0xe41d2489571d322189246dafa5ebde1f4699f498
+Balance map nonce: 0
+```
+- Doesn't log initial token allocation in constructor
+```shell=
+$ python scan.py --nonce=0 0xbdab447ba2fd0a493d93635da202ebcfaa309bcc6a22a95d808c93ce8f1c6c2d
+
+Analyzing 12 candidates...
+Holder:0xa3b2d1087bcebe59d188a23f75620612d967df72 +1000000000000000000000000000 Tx:0xbdab447ba2fd0a493d93635da202ebcfaa309bcc6a22a95d808c93ce8f1c6c2d
+```
 
 ### ChainLink Token (LINK)
 https://etherscan.io/address/0x514910771af9ca656af840dff83e8264ecf986ca#code
