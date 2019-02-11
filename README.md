@@ -6,16 +6,16 @@ This is a bytecode analyzer that scans through the traces of a given transaction
 This approach should work for any Solidity-based ERC20 contract, no ABI or source code needed. It also detects changes that happen at the time of contract creation (“pre-mines”) and hard-coded balances. Since it doesn’t rely on logs, it should catch minting/burning and other custom balance shifts as well, regardless of the emitted `Transfer()` events.
 
 ## `get_nonce.py`
-Scans the bytecode of an ERC20 token contract to identify the internal nonce that's associated with the storage pattern of the balances map.
+Scans an ERC20 transfer tx to identify the internal nonce that's associated with the storage pattern of the balances map in the token contract.
 
 ### Current heuristic
 *This can be improved, but works for now.*
 
 - We start with a sample tx that is guaranteed to include a single `Transfer` event for the token we're interested in.
-- The script replays the transaction (via a Parity `trace_replayTransaction` call) and monitors the state diffs to collect a set of storage location keys that got changed by the execution of the transaction. The potential balance values are a strict subset of this set of keys.
+- The script replays the transaction (via a Parity `trace_replayTransaction` call) and analyzes the state diffs to collect a set of storage location keys that got changed by the execution of the transaction. The keys associated with the balances that got changed during the transfer are a strict subset of this set of keys.
 - We ask Parity to simulate a `balanceOf(sender)` and compile a list of all values that circulated on the stack during this call.
-- We expect the only common element of the two sets created above is the storage location key of the balance for the token sender, which would need to have be accessed by both the routines. Let this be called `sender_sloc`.
-- Now we know that `sender_sloc = sha3(sender + nonce)` where `nonce` is a unique value allocated by the Solidity compiler to the mapping of balances. We assume all versions of Solidity use the same memory mapping strategy [*needs to be validated*]. This allows us to brute force the `nonce` in very few steps, as Solidity typically allocates the `nonce` values in increasing order starting from zero and there is an upper bound on how many data structures (hence nonces) will be defined in the typical token contracts.
+- We expect that the only common element of the two sets created above will be the storage location key of the balance for the token sender, which needs to be accessed by both routines. Let this key be called `sender_sloc`.
+- We know that `sender_sloc = sha3(sender + nonce)` where `nonce` is a unique value allocated by the Solidity compiler to the internal balances mapping. We assume all versions of Solidity use the same memory mapping strategy [*needs to be validated*]. This allows us to brute force the `nonce` in very few steps, as the compiler typically allocates the `nonce` values in increasing order starting from zero and there is a small upper bound on how many data structures (hence nonces) will be defined in the typical token contracts.
 
 ### Example
 ```shell=
@@ -26,14 +26,14 @@ Balance map nonce: 5
 ```
 
 ## `scan.py`
-Receives a `nonce` and a `tx`. Analyzes the execution of `tx` and identifies the holder addresses whose corresponding balances have changed - by looking at the map identified by `nonce`.
+Receives a `nonce` and a `tx`. Analyzes the execution of `tx` and identifies the holder addresses whose corresponding balances have changed - by looking at the internal contract map identified by `nonce`.
 
 ### Current method
 - Gather the set of storage location keys that were changed in the contract as a result of executing `tx`
 - Gather all 'address-like' values that got pushed on the stack while executing `tx`. We assume these to be the only possible address values whose balance could have changed as a result of `tx`.
-- We compute a rainbow table that maps each `sha3(candidate + nonce)` back to `candidate`. We expect to process a max. of ~1000 candidates for an average token transfer transaction.
-- We scan through the storage location keys that got touched during the execution and for each key we make a lookup in the rainbow table. If the preimage of the hash is there, we know this key is related to the balance mapping of the rainbow table value.
-- This lets us export event each time a balance key is touched, on the form `BalanceChange(holder_address, old_value, new_value)`
+- We compute a rainbow table that maps each `sha3(candidate + nonce)` back to `candidate`. We expect to process a max. of ~1000 candidates for an average token transfer transaction, so this step is not too computationally intensive and doesn't need external caching/pre-processing.
+- We scan through the storage location keys that got touched during the execution (by looking at the state diffs) and for each key we make a lookup in the rainbow table. If the preimage of the hash is found there, we know that this value corresponds to the balance mapping of the `candidate`.
+- This makes it possible to export an event each time a balance key is touched, on the form `BalanceChange(holder_address, old_value, new_value)`
 
 ### Analysis
 Both the time and memory complexity are linear in the number of values that get pushed in the VM stack when the tx gets executed, which in turn has an upper bound on the block gas limit. This makes retrieving the traces from Parity the main computational overhead. Other than that, the number of `sha3` computations is relatively small (<1000) for analyzing a transaction.
@@ -129,6 +129,26 @@ Holder:0x88e2efac3d2ef957fcd82ec201a506871ad06204 +500000000000000000000000000 T
 
 - Participants can ask refunds during the ICO, these are logged with a custom `LogRefund()` event
 
+
+### 0X (ZRX)
+https://etherscan.io/address/0xe41d2489571d322189246dafa5ebde1f4699f498#code
+Market cap: $146M
+
+```shell=
+$ python get_nonce.py 0xeea79c5e417ffb23d15c44d6ac4e49279c43a310faa8e6de6695ece117f8097e
+
+Token contract: 0xe41d2489571d322189246dafa5ebde1f4699f498
+Balance map nonce: 0
+```
+- Doesn't log initial token allocation in constructor
+```shell=
+$ python scan.py --nonce=0 0xbdab447ba2fd0a493d93635da202ebcfaa309bcc6a22a95d808c93ce8f1c6c2d
+
+Analyzing 12 candidates...
+Holder:0xa3b2d1087bcebe59d188a23f75620612d967df72 +1000000000000000000000000000 Tx:0xbdab447ba2fd0a493d93635da202ebcfaa309bcc6a22a95d808c93ce8f1c6c2d
+```
+
+
 ### FirstBlood Token (ST)
 https://etherscan.io/address/0xaf30d2a7e90d7dc361c8c4585e9bb7d2f6f15bc7#code
 Market cap: $2M
@@ -150,6 +170,7 @@ Holder:0xa5384627f6dcd3440298e2d8b0da9d5f0fcbcef7 +6455160169530275892500000 Tx:
 
 ```
 
+
 ### Maker (MKR)
 https://etherscan.io/address/0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2#code
 
@@ -165,28 +186,8 @@ Market cap: 166M
 - Non-standard `Burn()` event, doesn't log the holder address
 
 
-### 0X (ZRX)
-https://etherscan.io/address/0xe41d2489571d322189246dafa5ebde1f4699f498#code
-Market cap: $146M
-
-```shell=
-$ python get_nonce.py 0xeea79c5e417ffb23d15c44d6ac4e49279c43a310faa8e6de6695ece117f8097e
-
-Token contract: 0xe41d2489571d322189246dafa5ebde1f4699f498
-Balance map nonce: 0
-```
-- Doesn't log initial token allocation in constructor
-```shell=
-$ python scan.py --nonce=0 0xbdab447ba2fd0a493d93635da202ebcfaa309bcc6a22a95d808c93ce8f1c6c2d
-
-Analyzing 12 candidates...
-Holder:0xa3b2d1087bcebe59d188a23f75620612d967df72 +1000000000000000000000000000 Tx:0xbdab447ba2fd0a493d93635da202ebcfaa309bcc6a22a95d808c93ce8f1c6c2d
-```
-
 ### ChainLink Token (LINK)
 https://etherscan.io/address/0x514910771af9ca656af840dff83e8264ecf986ca#code
 
 Market cap: $140M
 - Doesn't log initial token allocation in constructor
-
-
